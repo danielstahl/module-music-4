@@ -1,23 +1,62 @@
 package net.soundmining
 
-import net.soundmining.modular.ModularSynth
 import net.soundmining.modular.ModularSynth._
-import net.soundmining.synth.Instrument.{EnvCurve, LINEAR, TAIL_ACTION}
+import net.soundmining.synth.Instrument.{LINEAR, TAIL_ACTION}
 import net.soundmining.synth.{Instrument, SuperColliderClient}
 import net.soundmining.synth.SuperColliderClient.loadDir
 import net.soundmining.synth.Utils.absoluteTimeToMillis
 import net.soundmining.Spectrum._
 import net.soundmining.modular.ModularInstrument.ControlInstrument
+import net.soundmining.sound.{SoundPlay, SoundPlays}
 
 object ModuleMusic4 {
   implicit val client: SuperColliderClient = SuperColliderClient()
   val SYNTH_DIR = "/Users/danielstahl/Documents/Projects/soundmining-modular/src/main/sc/synths"
+  val SOUND_DIR = "/Users/danielstahl/Documents/Music/sounds/Concrete Music 7_sounds/rendered_audio"
+
+  val LONG_BEAN_RATTLE_1 = "long-bean-rattle-1"
+  val LONG_BEAN_RATTLE_2 = "long-bean-rattle-2"
+  val SHORT_BEAN_RATTLE_1 = "short-bean-rattle-1"
+  val SHORT_BEAN_RATTLE_2 = "short-bean-rattle-2"
+
+  val soundPlays = SoundPlays(
+    soundPlays = Map(
+      LONG_BEAN_RATTLE_1 -> SoundPlay(s"$SOUND_DIR/Long bean rattle 1.flac", 0.00, 1.723),
+      LONG_BEAN_RATTLE_2 -> SoundPlay(s"$SOUND_DIR/Long bean rattle 2.flac", 0.095, 1.881),
+      SHORT_BEAN_RATTLE_1 -> SoundPlay(s"$SOUND_DIR/Short bean rattle 1.flac", 0.110, 0.475),
+      SHORT_BEAN_RATTLE_2 -> SoundPlay(s"$SOUND_DIR/Short bean rattle 2.flac", 0.087, 0.466)
+    ))
 
   def init(): Unit = {
     println("Starting up SuperCollider client")
     client.start
     Instrument.setupNodes(client)
     client.send(loadDir(SYNTH_DIR))
+    soundPlays.init
+  }
+
+  def playRattleIntro(): Unit = {
+    client.resetClock
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.5, 1)
+      .pan(-0.5, 0.5)
+      .play(0, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(1, 1)
+      .pan(0.7, -0.2)
+      .play(2, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(1.0, 1)
+      .pan(-0.5)
+      .play(4, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(1.0, 1)
+      .pan(0.5)
+      .play(4, 0)
   }
 
   def makeSpectrum(triplet: (Double, Double, Double)): Seq[Double] =
@@ -40,6 +79,39 @@ object ModuleMusic4 {
     val graph = pan.buildGraph(startTime, duration, pan.graph(Seq()))
 
     client.send(client.newBundle(absoluteTimeToMillis(startTime), graph))
+  }
+
+  def testPulseFm(): Unit = {
+    client.resetClock
+
+    val triplet = series.head.head
+    val firstSpectrum = makeSpectrum(triplet)
+    val carrier = firstSpectrum(2)
+    val modulator = firstSpectrum(2) * triplet._3
+
+    val fm = fmSineModulate(staticControl(carrier), sineOsc(lineControl(300, 3000), staticControl(modulator)), relativePercControl(0, 0.25, 0.5, Right(LINEAR)))
+      .addAction(TAIL_ACTION)
+
+    val pan = panning(fm, lineControl(-0.7, -0.5))
+      .addAction(TAIL_ACTION).withNrOfChannels(2)
+
+    pan.getOutputBus.staticBus(0)
+
+    val graph = pan.buildGraph(0, 10, pan.graph(Seq()))
+
+    client.send(client.newBundle(absoluteTimeToMillis(0), graph))
+
+    val fm2 = fmSawModulate(staticControl(carrier + -0.05), sineOsc(lineControl(300, 3000), staticControl((modulator * triplet._3) + 0.05)), relativePercControl(0, 0.1, 0.5, Right(LINEAR)))
+      .addAction(TAIL_ACTION)
+
+    val pan2 = panning(fm2, lineControl(-0.9, -0.7))
+      .addAction(TAIL_ACTION).withNrOfChannels(2)
+
+    pan2.getOutputBus.staticBus(0)
+
+    val graph2 = pan2.buildGraph(0.1, 10, pan2.graph(Seq()))
+
+    client.send(client.newBundle(absoluteTimeToMillis(0.1), graph2))
   }
 
   val series = Seq(
@@ -167,8 +239,6 @@ object ModuleMusic4 {
       .addAction(TAIL_ACTION).withNrOfChannels(2)
 
     pan.getOutputBus.staticBus(0)
-
-
 
     val graph = pan.buildGraph(startTime, dur, pan.graph(Seq()))
 
