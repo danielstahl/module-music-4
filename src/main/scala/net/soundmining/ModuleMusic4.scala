@@ -59,6 +59,127 @@ object ModuleMusic4 {
       .play(4, 0)
   }
 
+  def playRattleOutro(): Unit = {
+    client.resetClock
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.5, 1)
+      .pan(-0.5, 0.5)
+      .play(0, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(1, 1)
+      .pan(0.7, -0.2)
+      .play(2, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(1.0, 1)
+      .pan(-0.5)
+      .play(4, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(1.0, 1)
+      .pan(0.5)
+      .play(4, 0)
+  }
+
+  def rattleDevelopment(): Unit = {
+    client.resetClock
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.1, 1)
+      .pan(-0.5, 0.5)
+      .play(0, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.3, 1)
+      .pan(0.5, -0.5)
+      .play(5, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.5, 1)
+      .pan(-0.5, 0.5)
+      .play(8, 0)
+
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(1.0, 1)
+      .pan(-0.5)
+      .play(10, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(1.0, 1)
+      .pan(0.5)
+      .play(10, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(1.0, 1)
+      .pan(-0.5)
+      .play(15, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(1.0, 1)
+      .pan(0.5)
+      .play(15, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(0.1, 1)
+      .pan(-0.5)
+      .play(15, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(0.1, 1)
+      .pan(0.5)
+      .play(15, 0)
+
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(0.1, 1)
+      .pan(-0.3, 0.2)
+      .play(20, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(0.3, 1)
+      .pan(0.3, -0.2)
+      .play(27, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(0.5, 1)
+      .pan(-0.3, 0.2)
+      .play(29, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(0.1, 1)
+      .pan(-0.5)
+      .play(34, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(0.1, 1)
+      .pan(0.5)
+      .play(34, 0)
+
+
+    soundPlays.mono(LONG_BEAN_RATTLE_1)
+      .playMono(0.5, 1)
+      .pan(-0.5, 0.5)
+      .play(37, 0)
+
+    soundPlays.mono(LONG_BEAN_RATTLE_2)
+      .playMono(1, 1)
+      .pan(0.7, -0.2)
+      .play(39, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_1)
+      .playMono(1.0, 1)
+      .pan(-0.5)
+      .play(41, 0)
+
+    soundPlays.mono(SHORT_BEAN_RATTLE_2)
+      .playMono(1.0, 1)
+      .pan(0.5)
+      .play(41, 0)
+  }
+
   def makeSpectrum(triplet: (Double, Double, Double)): Seq[Double] =
     triplet match {
       case (carrier, modulator, fact) => makeSpectrum2(carrier, fact, 50)
@@ -81,37 +202,23 @@ object ModuleMusic4 {
     client.send(client.newBundle(absoluteTimeToMillis(startTime), graph))
   }
 
-  def testPulseFm(): Unit = {
-    client.resetClock
+  def playPulseFmNote(carrier: Double, modulator: Double, startTime: Double, duration: Double = 10,
+                 modAmount: () => ControlInstrument = () => lineControl(300, 3000),
+                 volume: () => ControlInstrument = () => relativePercControl(0, 0.15, 0.66, Right(LINEAR)),
+                 panPos: () => ControlInstrument = () => staticControl(0)): Unit = {
 
-    val triplet = series.head.head
-    val firstSpectrum = makeSpectrum(triplet)
-    val carrier = firstSpectrum(2)
-    val modulator = firstSpectrum(2) * triplet._3
-
-    val fm = fmSineModulate(staticControl(carrier), sineOsc(lineControl(300, 3000), staticControl(modulator)), relativePercControl(0, 0.25, 0.5, Right(LINEAR)))
+    val fm = fmSawModulate(staticControl(carrier + -0.05), sineOsc(modAmount(), staticControl(modulator + 0.05)), volume())
       .addAction(TAIL_ACTION)
 
-    val pan = panning(fm, lineControl(-0.7, -0.5))
+    val pan = panning(fm, panPos())
       .addAction(TAIL_ACTION).withNrOfChannels(2)
 
     pan.getOutputBus.staticBus(0)
 
-    val graph = pan.buildGraph(0, 10, pan.graph(Seq()))
+    val graph = pan.buildGraph(startTime, duration, pan.graph(Seq()))
 
-    client.send(client.newBundle(absoluteTimeToMillis(0), graph))
+    client.send(client.newBundle(absoluteTimeToMillis(startTime), graph))
 
-    val fm2 = fmSawModulate(staticControl(carrier + -0.05), sineOsc(lineControl(300, 3000), staticControl((modulator * triplet._3) + 0.05)), relativePercControl(0, 0.1, 0.5, Right(LINEAR)))
-      .addAction(TAIL_ACTION)
-
-    val pan2 = panning(fm2, lineControl(-0.9, -0.7))
-      .addAction(TAIL_ACTION).withNrOfChannels(2)
-
-    pan2.getOutputBus.staticBus(0)
-
-    val graph2 = pan2.buildGraph(0.1, 10, pan2.graph(Seq()))
-
-    client.send(client.newBundle(absoluteTimeToMillis(0.1), graph2))
   }
 
   val series = Seq(
@@ -150,8 +257,10 @@ object ModuleMusic4 {
   val times = Seq(21, 34, 21, 34, 13, 21, 32, 21)
   val durations = Seq(34, 55, 34, 55, 21, 34, 55, 34)
 
-  val lowToHighMod = () => lineControl(300, 3000)
-  val highToLowMod = () => lineControl(3000, 300)
+  val secondMelody = Seq(1, 3, 6)
+
+  val lowToHighMod = (low: Double, high: Double) => () => lineControl(low, high)
+  val highToLowMod = (low: Double, high: Double) => () => lineControl(high, low)
   val modAmounts = Seq(lowToHighMod, highToLowMod, lowToHighMod, highToLowMod, lowToHighMod, highToLowMod, lowToHighMod, highToLowMod)
 
   val middlePan = (panPos: Double) => () => staticControl(panPos)
@@ -169,19 +278,19 @@ object ModuleMusic4 {
   def makeTime(relative: Int, millis: Double): Double =
     (millis * relative) / 1000
 
-  def playFirstFmMelody(absTimes: (Int, Int, Int) = (2, 2, 2)): Unit = {
-    playFmMelody(series.head, absTimes = absTimes)
+  def playFirstFmMelody(absTimes: (Int, Int, Int) = (2, 2, 2), lowMod: Double = 300, highMod: Double = 3000): Unit = {
+    playFmMelody(series.head, absTimes = absTimes, lowMod = lowMod, highMod = highMod)
   }
 
-  def playSecondFmMelody(absTimes: (Int, Int, Int) = (1, 2, 2)): Unit = {
-    playFmMelody(series(1), absTimes = absTimes)
+  def playSecondFmMelody(absTimes: (Int, Int, Int) = (1, 2, 2), lowMod: Double = 200, highMod: Double = 5000): Unit = {
+    playFmMelody(series(1), absTimes = absTimes, lowMod = lowMod, highMod = highMod)
   }
 
-  def playThirdFmMelody(absTimes: (Int, Int, Int) = (8, 2, 7)): Unit = {
-    playFmMelody(series(2), absTimes = absTimes)
+  def playThirdFmMelody(absTimes: (Int, Int, Int) = (8, 2, 7), lowMod: Double = 300, highMod: Double = 3000): Unit = {
+    playFmMelody(series(2), absTimes = absTimes, lowMod = lowMod, highMod = highMod)
   }
 
-  def playFmMelody(oneSeries: Seq[(Double, Double, Double)], absTimes: (Int, Int, Int) = (2, 2, 2)): Unit = {
+  def playFmMelody(oneSeries: Seq[(Double, Double, Double)], absTimes: (Int, Int, Int) = (2, 2, 2), lowMod: Double = 300, highMod: Double = 3000): Unit = {
     client.resetClock
 
     val firstSeries = oneSeries
@@ -214,14 +323,36 @@ object ModuleMusic4 {
     println(s"third times $thirdTimes")
 
     melody.zipWithIndex.foreach {
-      case (note, i) => playFmNote(firstSpectrum(note), firstSpectrum(note) * firstTriplet._3, firstTimes(i), firstDurations(i), modAmount = modAmounts(i), panPos = pans(i)(-0.7))
+      case (note, i) => playFmNote(firstSpectrum(note), firstSpectrum(note) * firstTriplet._3, firstTimes(i), firstDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(-0.7))
     }
 
     melody.zipWithIndex.foreach {
-      case (note, i) => playFmNote(secondSpectrum(note), secondSpectrum(note) * secondTriplet._3, secondTimes(i), secondDurations(i), modAmount = modAmounts(i), panPos = pans(i)(0))
+      case (note, i) if secondMelody.contains(i) =>
+        playPulseFmNote(firstSpectrum(note), firstSpectrum(note) * firstTriplet._3, firstTimes(i), firstDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(-0.8))
+      case (note, i) =>
+
     }
+
     melody.zipWithIndex.foreach {
-      case (note, i) => playFmNote(thirdSpectrum(note), thirdSpectrum(note) * thirdTriplet._3, thirdTimes(i), thirdDurations(i), modAmount = modAmounts(i), panPos = pans(i)(0.7))
+      case (note, i) => playFmNote(secondSpectrum(note), secondSpectrum(note) * secondTriplet._3, secondTimes(i), secondDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0))
+    }
+
+    melody.zipWithIndex.foreach {
+      case (note, i) if secondMelody.contains(i) =>
+        playPulseFmNote(secondSpectrum(note), secondSpectrum(note) * secondTriplet._3, secondTimes(i), secondDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0.1))
+      case (note, i) =>
+
+    }
+
+    melody.zipWithIndex.foreach {
+      case (note, i) => playFmNote(thirdSpectrum(note), thirdSpectrum(note) * thirdTriplet._3, thirdTimes(i), thirdDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0.7))
+    }
+
+    melody.zipWithIndex.foreach {
+      case (note, i) if secondMelody.contains(i) =>
+        playPulseFmNote(thirdSpectrum(note), thirdSpectrum(note) * thirdTriplet._3, thirdTimes(i), thirdDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0.8))
+      case (note, i) =>
+
     }
   }
 
