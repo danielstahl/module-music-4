@@ -83,7 +83,7 @@ object ModuleMusic4 {
       .play(4, 0)
   }
 
-  def rattleDevelopment(): Unit = {
+  def playRattleDevelopment(): Unit = {
     client.resetClock
 
     soundPlays.mono(LONG_BEAN_RATTLE_1)
@@ -279,18 +279,18 @@ object ModuleMusic4 {
     (millis * relative) / 1000
 
   def playFirstFmMelody(absTimes: (Int, Int, Int) = (2, 2, 2), lowMod: Double = 300, highMod: Double = 3000): Unit = {
-    playFmMelody(series.head, absTimes = absTimes, lowMod = lowMod, highMod = highMod)
+    playFmMelody(series.head, absTimes = absTimes, lowMod = lowMod, highMod = highMod, rattle = false)
   }
 
   def playSecondFmMelody(absTimes: (Int, Int, Int) = (1, 2, 2), lowMod: Double = 200, highMod: Double = 5000): Unit = {
-    playFmMelody(series(1), absTimes = absTimes, lowMod = lowMod, highMod = highMod)
+    playFmMelody(series(1), absTimes = absTimes, lowMod = lowMod, highMod = highMod, rattle = true)
   }
 
   def playThirdFmMelody(absTimes: (Int, Int, Int) = (8, 2, 7), lowMod: Double = 300, highMod: Double = 3000): Unit = {
     playFmMelody(series(2), absTimes = absTimes, lowMod = lowMod, highMod = highMod)
   }
 
-  def playFmMelody(oneSeries: Seq[(Double, Double, Double)], absTimes: (Int, Int, Int) = (2, 2, 2), lowMod: Double = 300, highMod: Double = 3000): Unit = {
+  def playFmMelody(oneSeries: Seq[(Double, Double, Double)], absTimes: (Int, Int, Int) = (2, 2, 2), lowMod: Double = 300, highMod: Double = 3000, rattle: Boolean = false): Unit = {
     client.resetClock
 
     val firstSeries = oneSeries
@@ -344,6 +344,18 @@ object ModuleMusic4 {
 
     }
 
+    if(rattle) {
+      soundPlays.mono(SHORT_BEAN_RATTLE_1)
+        .playMono(0.1, 2)
+        .pan(-0.5)
+        .play(secondTimes(5), 0)
+
+      soundPlays.mono(SHORT_BEAN_RATTLE_2)
+        .playMono(0.1, 2)
+        .pan(0.5)
+        .play(secondTimes(5), 0)
+    }
+
     melody.zipWithIndex.foreach {
       case (note, i) => playFmNote(thirdSpectrum(note), thirdSpectrum(note) * thirdTriplet._3, thirdTimes(i), thirdDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0.7))
     }
@@ -352,8 +364,9 @@ object ModuleMusic4 {
       case (note, i) if secondMelody.contains(i) =>
         playPulseFmNote(thirdSpectrum(note), thirdSpectrum(note) * thirdTriplet._3, thirdTimes(i), thirdDurations(i), modAmount = modAmounts(i)(lowMod, highMod), panPos = pans(i)(0.8))
       case (note, i) =>
-
     }
+
+
   }
 
   def testSaw(): Unit = {
